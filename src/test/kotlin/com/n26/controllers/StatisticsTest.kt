@@ -15,27 +15,12 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 @WebMvcTest(value = [Statistics::class])
 class StatisticsTest
 {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
-
-//    @LocalServerPort
-//    private val port: Int = 0
-//
-//    @Value("\${local.management.port}")
-//    private val mgt: Int = 0
 
     @Test
     fun getsStats()
     {
-        val transaction = """
-            {
-                "amount": 12.3343,
-                "timestamp": "2018-07-17T09:59:51.312Z"
-            }
-        """.trimIndent()
-
-
         val result = MockMvcRequestBuilders.get("/statistics")
                 .accept(MediaType.APPLICATION_JSON_UTF8_VALUE)
                 .let (mockMvc::perform)
@@ -43,7 +28,6 @@ class StatisticsTest
                 .andReturn()
 
         println(result.response.contentAsString)
-
     }
 
 }
