@@ -8,8 +8,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
-
 @RestController
 @RequestMapping(path = "/transactions",
                 produces = MediaType.APPLICATION_JSON_VALUE)
@@ -20,14 +18,20 @@ public class Transactions {
     @PostMapping
     public ResponseEntity<?> createTransaction(@RequestBody Transaction transaction)
     {
-        // If the transaction is from the future, return an error.
-        if(Instant.now().compareTo(transaction.getTimestamp()) < 0)
+        HttpStatus status;
+        try
+        {
+            status = transactionService.add(transaction) ? HttpStatus.CREATED :
+                                                        HttpStatus.NO_CONTENT;
+        }
+        catch (IllegalArgumentException e)
+        {
+            // If the transaction is from the future or is otherwise
+            // malformed (and it hasn't been detected already), return an error.
             return new ResponseEntity<>(HttpStatus.UNPROCESSABLE_ENTITY);
+        }
 
-        // TODO -- change return code if transaction over 60s out.
-        transactionService.add(transaction);
-
-        return new ResponseEntity<>(HttpStatus.CREATED);
+        return new ResponseEntity<>(status);
     }
 
 

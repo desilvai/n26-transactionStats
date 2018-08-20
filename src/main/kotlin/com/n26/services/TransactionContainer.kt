@@ -3,21 +3,6 @@ package com.n26.services
 import com.n26.data.Transaction
 import java.math.BigDecimal
 
-data class ContainerStats(val min: BigDecimal,
-                          val max: BigDecimal,
-                          val sum: BigDecimal,
-                          val count: Long)
-{
-    val avg: BigDecimal
-        get() = sum.divide(BigDecimal(count))
-
-    infix operator fun plus(other: ContainerStats)
-           = ContainerStats(min.min(other.min),
-                            max.max(other.max),
-                            sum + other.sum,
-                            count + other.count)
-}
-
 class TransactionContainer
 {
     private val transactions: MutableList<Transaction> = mutableListOf()
@@ -32,6 +17,9 @@ class TransactionContainer
 
     val count: Long
         @Synchronized get() = transactions.count().toLong()
+
+    val values: List<Transaction>
+        @Synchronized get() = transactions.toList()
 
     fun add(transaction: Transaction) {
         synchronized(this) {

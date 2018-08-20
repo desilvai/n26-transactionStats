@@ -14,6 +14,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <kotlin.version>1.2.60</kotlin.version>
+        <kluent.version>1.40</kluent.version>
     </properties>
 
     <parent>
@@ -21,6 +22,14 @@
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>2.0.3.RELEASE</version>
     </parent>
+
+    <!-- Add jcenter as a repository for dependencies -->
+    <repositories>
+        <repository>
+            <id>jcenter</id>
+            <url>https://jcenter.bintray.com/</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>
@@ -199,6 +208,15 @@
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-kotlin</artifactId>
             <version>2.9.4.1</version>
+        </dependency>
+
+        <!-- Fluent assertions in kotlin JUnit tests -->
+        <dependency>
+            <groupId>org.amshove.kluent</groupId>
+            <artifactId>kluent</artifactId>
+            <version>${kluent.version}</version>
+            <!--<type>pom</type>-->
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
