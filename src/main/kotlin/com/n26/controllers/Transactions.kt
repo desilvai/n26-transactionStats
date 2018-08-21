@@ -24,6 +24,34 @@ class Transactions
     @Autowired
     private lateinit var transactionService: TransactionService
 
+    /**
+     * POST /transactions
+     *
+     * This endpoint is called to create a new transaction.
+     *
+     * Body:
+     *     {
+     *         "amount": "12.3343",
+     *         "timestamp": "2018-07-17T09:59:51.312Z"
+     *     }
+     *
+     * Where:
+     *    * amount – transaction amount; a string of arbitrary length that is
+     *          parsable as a BigDecimal
+     *    * timestamp – transaction time in the ISO 8601 format
+     *          YYYY-MM-DDThh:mm:ss.sssZ in the UTC timezone (this is not the
+     *          current timestamp)
+     *
+     * @param transaction  the [Transaction] plain-old Kotlin object (POKO)
+     *              created by Jackson to represent the contents of the request
+     *              body.
+     * @return  An empty body with one of the following:
+     *     * 201 – in case of success
+     *     * 204 – if the transaction is older than 60 seconds
+     *     * 400 – if the JSON is invalid
+     *     * 422 – if any of the fields are not parsable or the transaction
+     *             date is in the future
+     */
     @PostMapping
     @Suppress("UNUSED")
     fun createTransaction(@RequestBody transaction: Transaction): ResponseEntity<*>
@@ -45,6 +73,13 @@ class Transactions
     }
 
 
+    /**
+     * DELETE /transactions
+     *
+     * This endpoint causes all existing transactions to be deleted
+     *
+     * @return a 204 status code.
+     */
     @DeleteMapping
     @Suppress("UNUSED")
     fun deleteAllTransactions(): ResponseEntity<*>
@@ -54,7 +89,15 @@ class Transactions
     }
 
 
-    // Needed for testing
+    /**
+     * GET  /transactions
+     *
+     * This endpoint gets the count of all transactions in the
+     * "database"/cache.  It is provided solely for testing and therefore
+     * does not return a JSON object.  Instead it just returns the count in
+     * plain text.
+     */
+    // Needed for testing -- see if we can deprecate this.
     @GetMapping
     @Suppress("UNUSED")
     fun countTransactions(): ResponseEntity<*>
