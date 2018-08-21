@@ -1,22 +1,29 @@
 package com.n26.services
 
 import com.n26.data.Transaction
-import java.math.BigDecimal
 
 class TransactionContainer
 {
     private val transactions: MutableList<Transaction> = mutableListOf()
 
     /**
-     * Contains the minimum value for the container.  You MUST lock prior to
-     * accessing
+     * Contains all of the container statistics in one object.  This ensures
+     * that they are consistent (that no update occurs while another thread
+     * is midway through getting all of the stats).
      */
-    private var min: BigDecimal? = null
-    private var max: BigDecimal? = null
-    private var sum: BigDecimal = BigDecimal.ZERO
+    @Volatile
+    var containerStats: ContainerStats? = null
+        private set
+
+//    private var min: BigDecimal? = null
+//    private var max: BigDecimal? = null
+//    private var sum: BigDecimal = BigDecimal.ZERO.setScale(8, HALF_UP)
+//
+//    val count: Long
+//        @Synchronized get() = transactions.count().toLong()
 
     val count: Long
-        @Synchronized get() = transactions.count().toLong()
+        get() = containerStats?.count ?: 0
 
     val values: List<Transaction>
         @Synchronized get() = transactions.toList()
@@ -25,19 +32,32 @@ class TransactionContainer
         synchronized(this) {
             transactions.add(transaction)
 
-            min = min?.min(transaction.amount) ?: transaction.amount
-            max = max?.max(transaction.amount) ?: transaction.amount
-            sum = sum.add(transaction.amount)
+            containerStats = ContainerStats(transaction.amount,
+                                            transaction.amount,
+                                            transaction.amount,
+                                            1)
+                                    .plus(containerStats)
+//            min = min?.min(transaction.amount) ?: transaction.amount
+//            max = max?.max(transaction.amount) ?: transaction.amount
+//            sum = sum.add(transaction.amount)
         }
     }
 
-    fun getContainerStats(): ContainerStats?
-    {
-        return synchronized(this) {
-            if(min == null)
-                null
-            else
-                ContainerStats(min!!, max!!, sum, transactions.count().toLong())
-        }
-    }
+//    /**
+//     * Gets all of the container statistics at once.  This ensures that they
+//     * are consistent (that no update occurs between accessing them).
+//     *
+//     * @return  the container statistics if the container is non-empty or
+//     *          null if the container is empty.
+//     */
+//    fun getContainerStats(): ContainerStats?
+//    {
+////        return synchronized(this) {
+//            return containerStats
+////            if(min == null)
+////                null
+////            else
+////                ContainerStats(min!!, max!!, sum, transactions.count().toLong())
+////        }
+//    }
 }

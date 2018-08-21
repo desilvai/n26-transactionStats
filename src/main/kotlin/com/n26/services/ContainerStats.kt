@@ -20,11 +20,11 @@ data class ContainerStats(val min: BigDecimal,
     val avg: BigDecimal?
         get() = sum.divide(BigDecimal(count), DIVISION_PRECISION, HALF_UP)
 
-    infix operator fun plus(other: ContainerStats)
-            = ContainerStats(min.min(other.min),
-                             max.max(other.max),
-                             sum + other.sum,
-                             count + other.count)
+    infix operator fun plus(other: ContainerStats?)
+            = ContainerStats(other?.min?.min(min) ?: min,
+                             other?.max?.max(max) ?: max,
+                             other?.sum?.add(sum) ?: sum,
+                             other?.count?.plus(count) ?: count)
 
 
     companion object

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(path = ["/transactions"],
                 produces = [MediaType.APPLICATION_JSON_VALUE])
-class Transactions
+class TransactionsController
 {
     @Autowired
     private lateinit var transactionService: TransactionService

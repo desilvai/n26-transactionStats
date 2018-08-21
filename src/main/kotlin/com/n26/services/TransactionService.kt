@@ -108,7 +108,7 @@ class TransactionService @JvmOverloads constructor(
          * [MAX_TIME] second statistics window.  This value is equal to
          * [Instant.EPOCH.toEpochMilli()].
          */
-        private const val DEFAULT_BUCKET = 0L
+        const val DEFAULT_BUCKET = 0L
 
 
         init
@@ -186,7 +186,7 @@ class TransactionService @JvmOverloads constructor(
         // Retrieve stats for each bucket, combine them, then return
         // What if there are no transactions?
         return bucketWindowSequence(startTime)
-                .mapNotNull { buckets[it]?.getContainerStats() }
+                .mapNotNull { buckets[it]?.containerStats }
                 .takeIf { it.any() }
                 ?.reduce(ContainerStats::plus)
                 .let { Stats(min = it?.min ?: BigDecimal.ZERO,

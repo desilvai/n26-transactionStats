@@ -16,14 +16,18 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.Temporal
 
 /**
+ * Tests the transaction controller.  I could have mocked these and checked
+ * them, but most of these were much more simple.  Instead, I introduced a
+ * count endpoint (unrequested) that provides the data needed to check the
+ * calls.  
+ *
  * NOTE: Parameterized testing was too much of a pain to get to work with
  *      Spring, so I flattened out the structure a bit.  This has the advantage
  *      of allowing for more readable test names.
  */
 @RunWith(SpringRunner::class)
-//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@WebMvcTest(value = [Transactions::class], secure = false)
-class TransactionsTest
+@WebMvcTest(value = [TransactionsController::class], secure = false)
+class TransactionsControllerTest
 {
     @Autowired
     private lateinit var mockMvc: MockMvc
