@@ -18,9 +18,9 @@ import java.time.temporal.Temporal
 
 /**
  * Tests the transaction controller.  I could have mocked these and checked
- * them, but most of these were much more simple.  Instead, I introduced a
- * count endpoint (unrequested) that provides the data needed to check the
- * calls.  Thus, these are essentially integration tests.
+ * them, but most of these were simple enough that isolation from downstream
+ * code wasn't as important.  Indeed, most just check for bad input.  Thus, I
+ * will leave these as integration tests.
  *
  * NOTE: Parameterized testing was too much of a pain to get to work with
  *      Spring, so I flattened out the structure a bit.  This has the advantage
@@ -47,6 +47,7 @@ class TransactionsControllerTest
         clearAll()
         getCount() `should be equal to` 0
     }
+
 
     @Test
     fun `post accepted, outdated transaction`() = postTransaction(
@@ -271,17 +272,13 @@ class TransactionsControllerTest
      * We use this to verify that our transaction operation was successful.
      * This doesn't seem like it should work, but because we are only mocking
      * the call, we can access the service through autowiring and check the
-     * count without using a service endpoint.
+     * count without using a service endpoint.  If we choose to use an
+     * endpoint later, we can just change this function.
      */
-    private fun getCount(): Long
-    {
-        return transactionService.count()
-    }
+    private fun getCount(): Long = transactionService.count()
 
 
     private fun formatDateTime(time: Temporal): String
-    {
-        return DateTimeFormatter.ISO_INSTANT
-                .format(time)
-    }
+            = DateTimeFormatter.ISO_INSTANT.format(time)
+
 }
