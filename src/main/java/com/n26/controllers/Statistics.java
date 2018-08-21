@@ -19,12 +19,6 @@ public class Statistics {
     @GetMapping
     public ResponseEntity<?> getStatistics()
     {
-//        // TODO -- Implement me and remove dummy stats.
-//        Stats stats = new Stats(new BigDecimal(12345.678901),
-//                                BigDecimal.ZERO,
-//                                BigDecimal.ZERO,
-//                                BigDecimal.ZERO,
-//                                0L);
         return new ResponseEntity<>(transactionService.getStats(), HttpStatus.OK);
     }
 }

@@ -4,8 +4,9 @@ import com.n26.data.Stats
 import com.n26.data.Transaction
 import com.n26.services.TransactionService.Companion.BUCKETS_PER_SECOND
 import com.n26.services.TransactionService.Companion.MAX_TIME
-import com.n26.services.TransactionService.Companion.NANOS_PER_BUCKET
+import com.n26.services.TransactionService.Companion.MILLIS_PER_BUCKET
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -17,7 +18,7 @@ import java.util.concurrent.ConcurrentMap
  * Since there is no database (and thus no DAOs), this service tracks the
  * transactions that have been added and generates the statistics for the
  * service.  It tracks the statistics by placing each transaction into a
- * bucket corresponding to a [NANOS_PER_BUCKET]-sized time range.  There are
+ * bucket corresponding to a [MILLIS_PER_BUCKET]-sized time range.  There are
  * a fixed number of buckets within the statistics window (exactly
  * [MAX_TIME]*[BUCKETS_PER_SECOND] buckets).  Each bucket tracks the max,
  * min, count, and sum of the transactions in the bucket.
@@ -71,60 +72,74 @@ import java.util.concurrent.ConcurrentMap
  */
 @Service
 class TransactionService @JvmOverloads constructor(
-        private val buckets: ConcurrentMap<Instant, TransactionContainer>
+        private val buckets: ConcurrentMap<Long, TransactionContainer>
                 = ConcurrentHashMap())
 {
     // TODO -- change bucket map structure to have a clean-up option.
 
     companion object
     {
-        const val NANOS_PER_SECOND = 1000000000
+        private const val MILLIS_PER_SECOND = 1000
 
+        /**
+         * The number of buckets to have in each second.  Make sure this is a
+         * divisor 1000.
+         *
+         * Increasing this number (and the resultant number of buckets) makes
+         * this more accurate, but slower.  Ideally, we'd look at our
+         * inaccuracy tolerance and set this accordingly.
+         */
         const val BUCKETS_PER_SECOND = 2
 
         /**
          * The amount of time, in seconds, to include in each bucket -- must
          * be below a second.
          */
-        const val NANOS_PER_BUCKET = (NANOS_PER_SECOND / BUCKETS_PER_SECOND)
+        const val MILLIS_PER_BUCKET = MILLIS_PER_SECOND / BUCKETS_PER_SECOND
+
 
         /**
          * The size of the statistics window, in seconds.
          */
         const val MAX_TIME = 60
 
+        /**
+         * Defines the bucket to use if the transaction is outside of the
+         * [MAX_TIME] second statistics window.  This value is equal to
+         * [Instant.EPOCH.toEpochMilli()].
+         */
+        private const val DEFAULT_BUCKET = 0L
 
-//        @JvmStatic
-//        fun getBucketNumber(instant: Instant): Long
-//        {
-//            // The bucket id is a unique combination of the seconds and
-//            // nanoseconds.
-//            return (instant.epochSecond % (MAX_TIME + 1))
-//                    .shl(BUCKETS_PER_SECOND / 2) +
-//                   (instant.nano / NANOS_PER_BUCKET)
-//
-//            //                val epochNanos = BigInteger.valueOf(instant.epochSecond)
-//            //                        .multiply(BigInteger.valueOf(1000000000L))
-//            //                        .add(BigInteger.valueOf(instant.nano.toLong()))
-//        }
+
+        init
+        {
+            // Make sure I don't do something dumb later.  This will only be
+            // picked-up while assertions are on.
+            assert(MILLIS_PER_SECOND % BUCKETS_PER_SECOND == 0) {
+                "Invalid set-up.  The number of buckets must evenly divide " +
+                "1000 (the number of milliseconds in a second)."
+            }
+        }
 
 
         /**
          * Gets the identifier of the bucket containing the specified timestamp.
          */
         @JvmStatic
-        internal fun getBucketId(instant: Instant): Instant
-        {
-            val nanos = (instant.nano / NANOS_PER_BUCKET) * NANOS_PER_BUCKET
-            return instant.minusNanos((instant.nano - nanos).toLong())
-        }
+        internal fun getBucketId(instant: Instant): Long
+                = (instant.toEpochMilli() / MILLIS_PER_BUCKET) * MILLIS_PER_BUCKET
 
+
+        /**
+         * Gets a sequence of all bucket ids (descending) within the stats
+         * window (the last [MAX_TIME] seconds).
+         */
         @JvmStatic
-        internal fun bucketWindowSequence(startTime: Instant): Sequence<Instant>
-                = (MAX_TIME * BUCKETS_PER_SECOND).downTo(0)
+        internal fun bucketWindowSequence(startTime: Instant): Sequence<Long>
+                = (MAX_TIME * BUCKETS_PER_SECOND - 1).downTo(0)
                     .asSequence()
-                    .map { (NANOS_PER_SECOND * it).toLong() }
-                    .map { getBucketId(startTime.minusNanos(it)) }
+                    .map { (MILLIS_PER_BUCKET * it).toLong() }
+                    .map { getBucketId(startTime.minusMillis(it)) }
     }
 
 
@@ -146,7 +161,7 @@ class TransactionService @JvmOverloads constructor(
                                                "future")
 
             transaction.timestamp < currentTime.minusSeconds(MAX_TIME.toLong()) ->
-                  Instant.EPOCH
+                DEFAULT_BUCKET
 
             else -> getBucketId(transaction.timestamp)
         }
@@ -154,13 +169,19 @@ class TransactionService @JvmOverloads constructor(
         val bucket = buckets.getOrPut(bucketId, ::TransactionContainer)
         bucket.add(transaction)
 
-        return bucketId != Instant.EPOCH
+        return bucketId != DEFAULT_BUCKET
     }
 
+
+    /**
+     * Gets the stats for the last [MAX_TIME] seconds.  If there have been no
+     * transactions in the last [MAX_TIME] seconds, all stats will be 0.
+     */
     fun getStats(): Stats
     {
         // Get range
         val startTime = Instant.now()
+
 
         // Retrieve stats for each bucket, combine them, then return
         // What if there are no transactions?
@@ -168,22 +189,27 @@ class TransactionService @JvmOverloads constructor(
                 .mapNotNull { buckets[it]?.getContainerStats() }
                 .takeIf { it.any() }
                 ?.reduce(ContainerStats::plus)
-                .let { Stats(min = it?.min,
-                              max = it?.max,
-                              sum = it?.sum,
-                              avg = it?.avg,
-                              count = it?.count ?: 0L) }
-//                ?: Stats(null, null, null, null, 0L)
+                .let { Stats(min = it?.min ?: BigDecimal.ZERO,
+                             max = it?.max ?: BigDecimal.ZERO,
+                             sum = it?.sum ?: BigDecimal.ZERO,
+                             avg = it?.avg ?: BigDecimal.ZERO,
+                             count = it?.count ?: 0L) }
     }
 
+
+    /**
+     * Clears all transactions.
+     */
     fun clear()
     {
         buckets.clear()
     }
 
-    // For debug
+
+    // For testing/debug
+    /**
+     * Gets the number of stored transactions.
+     */
     fun count(): Long
             = buckets.values.map { it.count }.fold(0, Long::plus)
-
-//    private fun instantNow() = Instant.now()
 }
