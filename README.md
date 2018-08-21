@@ -9,7 +9,7 @@ The API has the following endpoints:
     `GET /statistics` – returns the statistic based of the transactions of the last 60 seconds.
     `DELETE /transactions` – deletes all transactions.
 
-These endpoints are provided by the `TransactionsController` (POST and DELETE) and `StatisticsController` (GET).  The specs for the endpoints are included in the method headers.  Both controllers interact with the `TransactionService`, which contains the add/delete/statics-gathering logic.  Since there is no database (and thus no DAOs), this service tracks the transactions that have been added and generates the statistics for the service. 
+These endpoints are provided by the `TransactionsController` (POST and DELETE) and `StatisticsController` (GET).  The specs for the endpoints are included in the method headers.  Both controllers interact with the `TransactionService`, which contains the add/delete/statics-gathering logic.  Since there is no database (and thus no DAOs), this service tracks the transactions that have been added and generates the statistics for the service.
 
 There were a few different options that we considered for solving the issue.  Rather than have a second thread that maintains the statistics, we opted for organizing the transactions into buckets corresponding to a 500 millisecond-sized time range.  There are a fixed number of buckets within the statistics window (exactly 120 buckets).  Each bucket (a `TransactionContainer`) tracks the max, min, count, and sum of the transactions in the bucket.
 
@@ -51,5 +51,5 @@ Mockito, the standard mocking framework, does not work out of the box with Kotli
 
 Additional Verification
 -----------------------
-Due to time constraints, my verification was limited.  I did reach 96% line coverage (all uncovered lines have been checked and it is reasonable to expect they have not been covered).  I would like to also do performance testing and static analysis to check for possible concurrency issues (especially since testing is generally ineffective with respect to concurrency).  I ran FindBugs, but it really wasn't helpful (all detected issues are things that Kotlin protects me from).
+Due to time constraints, my verification was limited.  I did reach 96% line coverage  (all uncovered lines have been checked and it is reasonable to expect they have not been covered).  I would like to also do performance testing and static analysis to check for possible concurrency issues (especially since testing is generally ineffective with respect to concurrency).  I ran FindBugs, but it really wasn't helpful (all detected issues are things that Kotlin protects me from).
 
