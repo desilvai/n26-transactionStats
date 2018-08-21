@@ -1,5 +1,6 @@
 package com.n26.controllers
 
+import com.n26.services.TransactionService
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
@@ -19,7 +20,7 @@ import java.time.temporal.Temporal
  * Tests the transaction controller.  I could have mocked these and checked
  * them, but most of these were much more simple.  Instead, I introduced a
  * count endpoint (unrequested) that provides the data needed to check the
- * calls.  
+ * calls.  Thus, these are essentially integration tests.
  *
  * NOTE: Parameterized testing was too much of a pain to get to work with
  *      Spring, so I flattened out the structure a bit.  This has the advantage
@@ -31,6 +32,10 @@ class TransactionsControllerTest
 {
     @Autowired
     private lateinit var mockMvc: MockMvc
+
+
+    @Autowired
+    private lateinit var transactionService: TransactionService
 
     /**
      * After each run, clear out the repository.  We will confirm that it is
@@ -229,12 +234,6 @@ class TransactionsControllerTest
             422
     )
 
-//    @Test
-//    fun `add multiple transactions`()
-//    {
-//        TODO("Implement Me")
-//    }
-
 
     /**
      * Helper function that will post the given transaction and check if we
@@ -270,14 +269,13 @@ class TransactionsControllerTest
 
     /**
      * We use this to verify that our transaction operation was successful.
+     * This doesn't seem like it should work, but because we are only mocking
+     * the call, we can access the service through autowiring and check the
+     * count without using a service endpoint.
      */
-    private fun getCount(): Int
+    private fun getCount(): Long
     {
-        return MockMvcRequestBuilders.get("/transactions")
-                .let (mockMvc::perform)
-                .andExpect(MockMvcResultMatchers.status().isOk)
-                .andReturn()
-                .let { Integer.parseInt(it.response.contentAsString) }
+        return transactionService.count()
     }
 
 

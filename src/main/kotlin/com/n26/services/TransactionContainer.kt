@@ -15,20 +15,21 @@ class TransactionContainer
     var containerStats: ContainerStats? = null
         private set
 
-//    private var min: BigDecimal? = null
-//    private var max: BigDecimal? = null
-//    private var sum: BigDecimal = BigDecimal.ZERO.setScale(8, HALF_UP)
-//
-//    val count: Long
-//        @Synchronized get() = transactions.count().toLong()
 
     val count: Long
         get() = containerStats?.count ?: 0
 
+
     val values: List<Transaction>
         @Synchronized get() = transactions.toList()
 
-    fun add(transaction: Transaction) {
+
+    /**
+     * Adds a transaction to the set of transactions in the container and
+     * updates the statistics.
+     */
+    fun add(transaction: Transaction)
+    {
         synchronized(this) {
             transactions.add(transaction)
 
@@ -37,27 +38,30 @@ class TransactionContainer
                                             transaction.amount,
                                             1)
                                     .plus(containerStats)
-//            min = min?.min(transaction.amount) ?: transaction.amount
-//            max = max?.max(transaction.amount) ?: transaction.amount
-//            sum = sum.add(transaction.amount)
+
+            // The stats and the container's contents should always match.
+            assert(containerStats!!.count == transactions.count().toLong())
         }
     }
 
-//    /**
-//     * Gets all of the container statistics at once.  This ensures that they
-//     * are consistent (that no update occurs between accessing them).
-//     *
-//     * @return  the container statistics if the container is non-empty or
-//     *          null if the container is empty.
-//     */
-//    fun getContainerStats(): ContainerStats?
-//    {
-////        return synchronized(this) {
-//            return containerStats
-////            if(min == null)
-////                null
-////            else
-////                ContainerStats(min!!, max!!, sum, transactions.count().toLong())
-////        }
-//    }
+
+    fun addAll(other: TransactionContainer)
+    {
+        val (otherValues, otherStats) = other.valuesAndStats()
+
+        synchronized(this) {
+            transactions.addAll(otherValues)
+
+            containerStats = otherStats?.plus(containerStats) ?: containerStats
+
+            // The stats and the container's contents should always match.
+            assert(containerStats == null ||
+                   containerStats?.count == transactions.count().toLong())
+        }
+    }
+
+    @Synchronized
+    private fun valuesAndStats(): Pair<List<Transaction>, ContainerStats?>
+            = Pair(values, containerStats)
+
 }

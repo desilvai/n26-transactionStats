@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -24,6 +23,9 @@ class TransactionsController
     @Autowired
     private lateinit var transactionService: TransactionService
 
+    //-----------------------------------------------------------------------
+    //  SERVICE ENDPOINTS
+    //-----------------------------------------------------------------------
     /**
      * POST /transactions
      *
@@ -86,22 +88,5 @@ class TransactionsController
     {
         transactionService.clear()
         return ResponseEntity<Any>(HttpStatus.NO_CONTENT)
-    }
-
-
-    /**
-     * GET  /transactions
-     *
-     * This endpoint gets the count of all transactions in the
-     * "database"/cache.  It is provided solely for testing and therefore
-     * does not return a JSON object.  Instead it just returns the count in
-     * plain text.
-     */
-    // Needed for testing -- see if we can deprecate this.
-    @GetMapping
-    @Suppress("UNUSED")
-    fun countTransactions(): ResponseEntity<*>
-    {
-        return ResponseEntity(transactionService.count(), HttpStatus.OK)
     }
 }

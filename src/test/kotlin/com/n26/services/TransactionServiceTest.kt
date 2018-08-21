@@ -5,6 +5,7 @@ import dev.desilvai.utils.AccessesPrivateData
 import org.amshove.kluent.`should be false`
 import org.amshove.kluent.`should be true`
 import org.amshove.kluent.`should equal`
+import org.amshove.kluent.`should not be null`
 import org.amshove.kluent.`should not equal`
 import org.junit.Assert
 import org.junit.Test
@@ -156,6 +157,48 @@ class TransactionServiceTest: AccessesPrivateData
         }
     }
 
+
+    @Test
+    fun `trigger clean-up`()
+    {
+        val hashMap = ConcurrentHashMap<Long, TransactionContainer>()
+
+        val transactionsByTime = (2..4)
+                .map { it.toLong() * TransactionService.MAX_TIME }
+                .map { Instant.now().minusSeconds(it) }
+                .asSequence()
+                .flatMap(TransactionService.Companion::bucketWindowSequence)
+                .associate {
+                    Pair(it,
+                         Transaction(BigDecimal.TEN, Instant.ofEpochMilli(it)))
+                }
+
+        transactionsByTime
+                .mapValues { TransactionContainer().apply { add(it.value) } }
+                .also { hashMap.putAll(it) }
+
+        val service = TransactionService(hashMap)
+
+        // WHEN we add another transaction
+        val newTransaction = Transaction(BigDecimal.ONE, Instant.now())
+        service.add(newTransaction)
+                .`should be true`()
+
+        // THEN clean-up is triggered and everything that was previously
+        // present (which is too old) is moved to the default bucket.
+        val expectedTransactions = transactionsByTime.values.toSet()
+
+        hashMap[TransactionService.DEFAULT_BUCKET].`should not be null`()
+        val actualTransactions = hashMap[TransactionService.DEFAULT_BUCKET]!!
+                                        .values.toSet()
+
+        expectedTransactions `should equal` actualTransactions
+
+        // AND only the latest transaction is in the other bucket.
+        2 `should equal`  hashMap.count()
+        hashMap.remove(TransactionService.DEFAULT_BUCKET)
+        setOf(newTransaction) `should equal` hashMap.values.single().values.toSet()
+    }
 
     // Tests the companion object
     @Test

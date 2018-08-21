@@ -8,6 +8,10 @@ import java.math.RoundingMode
 import java.text.DecimalFormat
 import kotlin.concurrent.getOrSet
 
+/**
+ * Serializes a BigDecimal so that it always prints two decimal places
+ * rounding up the right-most place.
+ */
 class BigDecimalSerializer(decimal: Class<BigDecimal>? = null):
         StdSerializer<BigDecimal>(decimal)
 {
@@ -16,8 +20,7 @@ class BigDecimalSerializer(decimal: Class<BigDecimal>? = null):
                            provider: SerializerProvider?)
     {
         // This is a thread-safe way to do serialization.
-        decimal//.setScale(2, HALF_UP)
-                .let {
+        decimal.let {
                     formatter.getOrSet(Companion::generateFormatter).format(it)
                 }
                 .let(jsonGenerator::writeString)

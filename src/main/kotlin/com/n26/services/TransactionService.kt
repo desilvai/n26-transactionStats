@@ -34,49 +34,38 @@ import java.util.concurrent.ConcurrentMap
  *
  * Because we are using buckets to categorize transactions according to their
  * time, there is going to be some inaccuracy in the computation of the stats.
- * However, we expect this to fall into the acceptable range.  Why?  There
- * are multiple sources of inaccuracy within this function (assuming a
- * standard definition of time units):
- *   * Request servicing time
- *   * Uncommitted updates
- *   * Possible clock drift among clients adding transactions
+ * However, this function is inherently inaccurate due to ambiguity over the
+ * ending time of "the last 60 seconds" time period.  This period could run
+ * from the time the client submitted the request, the time the server received
+ * the request, or the time the server services the request.  Further, the
+ * transaction times could be off due to challenges synchronizing clocks and
+ * clock drift (we assume all transactions are standardized around Java's
+ * definition of time primitives).  Due to all of these sources of inaccuracy,
+ * we believe the additional inaccuracy from a bucket-categorization of
+ * transactions is acceptable.  If additional accuracy is needed, the program
+ * can be updated (by increasing the [BUCKETS_PER_SECOND] constant) to bring
+ * about the desired improvements.
  *
- * Websites are considered immediately responsive if they can load in 0.1
- * seconds and seamless at 1 second.  We use a constant for the number of
- * buckets per second so we can measure the end-to-end time and adjust.
- * However, the request servicing time does make the start time of the window
- * ambiguous.  Should we use the instant when we get the request, or should we
- * assume some network latency and use a time in the past (since we don't
- * have a request time)?  A follow-up to this is: How out of date can the data
- * be by the time it reaches the caller and how much does clock drift impact
- * the accuracy of the transaction times?  Indeed, the system may need to wait
- * for the system to reach a consistent data state before it can access the
- * statistics.  As it stands, there is no response time constraint (requests
- * for them have been rejected) and the timestamps are potentially
- * inaccurate/inconsistent.  Thus, we will assume that there  is some leeway in
- * what is meant by "the last 60 seconds"; that a best-effort approach is
- * satisfactory.
- *
- * Beyond the statistics request servicing time, there is a possibility of
- * omitting pertinent, uncommmitted transactions from the statistics.  This
- * occurs when there os a high-volume of adds within the current time window.
- * It is also worth noting here that transactions could arrive out-of-order.
- * Because we want some responsiveness, we will ignore uncommmited
- * transactions and use the stats at the point when the system reaches a
- * stable state.
+ * An additional source of inaccuracy codes from the possibility of omitting
+ * pertinent, uncommitted transactions from the statistics.  This occurs when
+ * there is a high-volume of adds within the current time window.  It is also
+ * worth noting here that transactions could arrive out-of-order.  In deference
+ * to responsiveness, we will ignore uncommmited transactions and use the stats
+ * at the point when the system reaches a stable state.
  *
  * @param buckets  the initial transaction set (a mapping from the instant
- *      identifying the bucket to the bucket itself).  This is provided as a
- *      constructor parameter only to aid in testing and should NOT be used for
- *      any other purpose.
+ *      identifying the bucket to the bucket itself).  We use a mapping here
+ *      because adds are not ordered, and looking up the right transaction
+ *      bucket is faster with a hash table (which will also minimize the
+ *      amount of time spent with the table locked).  Also, note that this is
+ *      provided as a constructor parameter only to aid in testing and should
+ *      NOT be used for any other purpose.
  */
 @Service
 class TransactionService @JvmOverloads constructor(
         private val buckets: ConcurrentMap<Long, TransactionContainer>
                 = ConcurrentHashMap())
 {
-    // TODO -- change bucket map structure to have a clean-up option.
-
     companion object
     {
         private const val MILLIS_PER_SECOND = 1000
@@ -102,6 +91,11 @@ class TransactionService @JvmOverloads constructor(
          * The size of the statistics window, in seconds.
          */
         const val MAX_TIME = 60
+
+        /**
+         * The size of the bucket list that triggers clean-up.
+         */
+        const val TRIGGER_CLEANUP_AT_SIZE = 2 * MAX_TIME * BUCKETS_PER_SECOND
 
         /**
          * Defines the bucket to use if the transaction is outside of the
@@ -169,6 +163,14 @@ class TransactionService @JvmOverloads constructor(
         val bucket = buckets.getOrPut(bucketId, ::TransactionContainer)
         bucket.add(transaction)
 
+        // Now, trigger clean-up if the number of buckets has grown beyond
+        // double the number needed.  This should be a rare call.
+        // I'm not certain that this is needed for the assignment, but it
+        // seems like it is required to get the data to a consistent state.
+        // We'd probably do something different if we had a DB.
+        if(buckets.count() > TRIGGER_CLEANUP_AT_SIZE)
+            cleanUp()
+
         return bucketId != DEFAULT_BUCKET
     }
 
@@ -212,4 +214,43 @@ class TransactionService @JvmOverloads constructor(
      */
     fun count(): Long
             = buckets.values.map { it.count }.fold(0, Long::plus)
+
+
+    /**
+     * Occasionally, we want to clean-up the hash table (if it is a long-ish
+     * running application, this might matter).  It will also ensure data is
+     * classified consistently (we skip right to the default bucket when a
+     * transaction comes in outside of the window, but we never moved stuff
+     * that was outside of the window into the same bucket).
+     *
+     * It also seems like it is against the spirit of this assignment to just
+     * delete the data.
+     */
+    @Synchronized
+    private fun cleanUp()
+    {
+        // Make sure we still need to do something now that we have the lock.
+        if(buckets.count() <= TRIGGER_CLEANUP_AT_SIZE)
+            return
+
+        val cleanUpAfterTime = Instant.now().minusSeconds(MAX_TIME + 1L)
+                                        .toEpochMilli()
+
+        val bucketIter = buckets.iterator()
+        while (bucketIter.hasNext())
+        {
+            val (key, bucketContents) = bucketIter.next()
+            if(key == DEFAULT_BUCKET)
+                continue
+
+            if(key < cleanUpAfterTime)
+            {
+                // Merge with default bucket
+                val bucket = buckets.getOrPut(DEFAULT_BUCKET, ::TransactionContainer)
+                bucket.addAll(bucketContents)
+
+                bucketIter.remove()
+            }
+        }
+    }
 }
