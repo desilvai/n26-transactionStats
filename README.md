@@ -51,6 +51,7 @@ Mockito, the standard mocking framework, does not work out of the box with Kotli
 
 Additional Verification
 -----------------------
+I did reach 96% line coverage according to IntelliJ's coverage checker.
 
 Due to time constraints, my verification was limited.   The remaining 4% cannot be covered and were manually checked.  I would like to also do performance testing and static analysis to check for possible concurrency issues (especially since testing is generally ineffective with respect to concurrency).  I ran FindBugs, but it really wasn't helpful (all detected issues are things that Kotlin protects me from).
 
