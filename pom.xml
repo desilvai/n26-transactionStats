@@ -15,6 +15,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <kotlin.version>1.2.60</kotlin.version>
         <kluent.version>1.40</kluent.version>
+        <findbugs.version>3.0.5</findbugs.version>
     </properties>
 
     <parent>
@@ -157,8 +158,27 @@
                 </executions>
             </plugin>
 
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>${findbugs.version}</version>
+            </plugin>
         </plugins>
     </build>
+
+    <!-- Needed to do some static analysis, but the Kotlin tools aren't
+         mature enough for concurrency checks.  This is my attempt to make
+         findbugs work... -->
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>${findbugs.version}</version>
+            </plugin>
+        </plugins>
+    </reporting>
 
     <dependencies>
         <dependency>

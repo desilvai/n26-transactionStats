@@ -49,3 +49,7 @@ To run all tests, execute:
 Mockito, the standard mocking framework, does not work out of the box with Kotlin due to Kotlin's final-by-default class model.  There is an incubating Mockito feature that allows it to work with Kotlin by wrapping/inlining the mocks.  This is enabled in this project by including the `org.mockito.plugins.MockMaker` resource file in the `test/resources/mockito-extensions` directory.  Make sure you do not delete this file/directory as it will cause the test cases to fail.
 
 
+Additional Verification
+-----------------------
+Due to time constraints, my verification was limited.  I did reach 96% line coverage (all uncovered lines have been checked and it is reasonable to expect they have not been covered).  I would like to also do performance testing and static analysis to check for possible concurrency issues (especially since testing is generally ineffective with respect to concurrency).  I ran FindBugs, but it really wasn't helpful (all detected issues are things that Kotlin protects me from).
+
