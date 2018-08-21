@@ -35,10 +35,10 @@ class TransactionContainerTest
 
         // AND they are accurate.
         with(actualStats!!) {
-            expectedMin `should equal` min
-            expectedMax `should equal` max
-            expectedSum.roundUp(10) `should equal` sum.roundUp(10)
-            expectedCount.toLong() `should equal` count
+            min `should equal` expectedMin
+            max `should equal` expectedMax
+            sum.roundUp(10) `should equal` expectedSum.roundUp(10)
+            count `should equal` expectedCount.toLong()
         }
     }
 

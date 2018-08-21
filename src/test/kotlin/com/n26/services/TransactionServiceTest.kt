@@ -7,7 +7,6 @@ import org.amshove.kluent.`should be true`
 import org.amshove.kluent.`should equal`
 import org.amshove.kluent.`should not be null`
 import org.amshove.kluent.`should not equal`
-import org.junit.Assert
 import org.junit.Test
 import roundUp
 import java.math.BigDecimal
@@ -192,12 +191,12 @@ class TransactionServiceTest: AccessesPrivateData
         val actualTransactions = hashMap[TransactionService.DEFAULT_BUCKET]!!
                                         .values.toSet()
 
-        expectedTransactions `should equal` actualTransactions
+         actualTransactions `should equal` expectedTransactions
 
         // AND only the latest transaction is in the other bucket.
-        2 `should equal`  hashMap.count()
+        hashMap.count() `should equal`  2
         hashMap.remove(TransactionService.DEFAULT_BUCKET)
-        setOf(newTransaction) `should equal` hashMap.values.single().values.toSet()
+        hashMap.values.single().values.toSet() `should equal` setOf(newTransaction)
     }
 
     // Tests the companion object
@@ -208,7 +207,8 @@ class TransactionServiceTest: AccessesPrivateData
         val secondTime = Instant.now()
                 .plusMillis(TransactionService.MILLIS_PER_BUCKET.toLong())
 
-        Assert.assertNotEquals(firstTime, secondTime)
+        // Problem with the test case if they are equal!
+        assert(firstTime != secondTime)
 
         val firstBucket = TransactionService.getBucketId(firstTime)
         val secondBucket = TransactionService.getBucketId(secondTime)
@@ -222,7 +222,8 @@ class TransactionServiceTest: AccessesPrivateData
         val firstTime = Instant.now()
         val secondTime = Instant.now().plusMillis(5000)
 
-        Assert.assertNotEquals(firstTime, secondTime)
+        // Problem with the test case if they are equal!
+        assert(firstTime != secondTime)
 
         val firstWindow = TransactionService.bucketWindowSequence(firstTime).toList()
         val secondWindow = TransactionService.bucketWindowSequence(secondTime).toList()

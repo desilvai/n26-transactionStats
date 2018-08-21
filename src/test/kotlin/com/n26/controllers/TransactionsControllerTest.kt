@@ -1,8 +1,8 @@
 package com.n26.controllers
 
 import com.n26.services.TransactionService
+import org.amshove.kluent.`should be equal to`
 import org.junit.After
-import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -45,7 +45,7 @@ class TransactionsControllerTest
     fun cleanUp()
     {
         clearAll()
-        Assert.assertEquals(getCount(), 0)
+        getCount() `should be equal to` 0
     }
 
     @Test
@@ -248,11 +248,11 @@ class TransactionsControllerTest
                 .let (mockMvc::perform)
                 .andReturn()
 
-        Assert.assertEquals(result.response.status, expectedResponse)
-        Assert.assertEquals(result.response.contentLength, 0)
+        result.response.status `should be equal to` expectedResponse
+        result.response.contentLength `should be equal to` 0
 
         if(expectedResponse in 200..299)
-            Assert.assertEquals(getCount(), 1)
+            getCount() `should be equal to`  1
     }
 
 
@@ -263,7 +263,7 @@ class TransactionsControllerTest
                 .let (mockMvc::perform)
                 .andExpect(MockMvcResultMatchers.status().isNoContent)
                 .andReturn()
-                .also { Assert.assertEquals(it.response.contentLength, 0) }
+                .also { it.response.contentLength `should be equal to`  0 }
     }
 
 
